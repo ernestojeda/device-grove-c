@@ -14,9 +14,29 @@
 // limitations under the License.
 //
 
-edgeXBuildCApp (
-    project: 'device-grove-c',
-    dockerBuildFilePath: 'scripts/Dockerfile.alpine-3.9-base',
-    dockerFilePath: 'scripts/Dockerfile.alpine-3.9',
-    arch: ['arm64']
-)
+@Library("edgex-global-pipelines@experimental") _
+
+pipeline {
+    agent { label 'ubuntu18.04-docker-arm64-4c-16g' }
+    stages {
+        // this one looks like it only is created for ARM
+        stage('Snap my ARM') {
+            environment {
+                ARCH = 'arm64'
+            }
+            when {
+                expression { findFiles(glob: 'snap/snapcraft.yaml').length == 1 }
+            }
+            steps {
+                script {
+                    edgex.bannerMessage 'This is a proof of concept for ARM'
+                    sh 'echo v1.1.2 > ./VERSION' // this is to mimic the behavior of edgeXBuildCApp
+                    edgeXSnap(
+                        jobType: edgex.isReleaseStream()
+                            ? 'stage' : 'build'
+                    )
+                }
+            }
+        }
+    }
+}
